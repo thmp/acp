@@ -25,8 +25,8 @@ print "Start basis construction"
 
 timer = Timer()
 
-M = 7 # site number 
-N = 7 # atom number
+M = 5 # site number 
+N = 5 # atom number
 
 dim = math.factorial(N+M-1) / math.factorial(N) / math.factorial(M-1)
 
@@ -112,7 +112,20 @@ def adagger_a(v,i):
 		pref = v[i]
 		v[i] -= 1
 		v[j] += 1
-		pref = math.sqrt(v[j]*pref)
+		pref *= v[j]
+		pref = math.sqrt(pref)
+		return (pref, lookup(T(v)))
+	else: 
+		return (0, -1)
+
+def adagger_a_spdm(v,i,j):
+	v = v.copy()
+	# check if we can annihilate
+	if v[j] > 0:
+		pref = v[j]
+		v[j] -= 1
+		v[i] += 1
+		pref = math.sqrt(v[i]*pref)
 		return (pref, lookup(T(v)))
 	else: 
 		return (0, -1)
@@ -152,31 +165,29 @@ for k in range(dim): # dimension
 
 print timer.round(), "seconds"
 
+print H.toarray()
+
 print "Calculate Lanczos eigenvalues and eigenvectors"
 
-w, v = splg.eigsh(H,k=3,which='SA') # lowest eigenvalue
+w, v = splg.eigsh(H,k=6,which='SA') # lowest eigenvalue
 
-#print w
-print v[0]
-print v[v.shape[0]-1]
-
-
-
-print "Calculate ground state vector"
-
-G = np.zeros((M))
-for i in range(dim):
-	G = G + basis[i,:]*v[i,0]
-
-#print basis
-print G
+print w
+print v[:,0]
 
 print "Calculate SPDM single particle density matrix"
 
 spdm = np.zeros((M,M))
+
 for i in range(M):
 	for j in range(M):
-		pass
+		# sum through basis
+		for k in range(dim):
+			pref, k_new = adagger_a_spdm(basis[k,:], i, j)
+			if k_new > 0:
+				spdm[i,j] += v[0,k_new]*v[0,k]*pref
+
+print spdm
+print spdm.trace()
 
 
 print timer.round(), "seconds"
